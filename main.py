@@ -1,5 +1,5 @@
 import time
-
+from decouple import config
 import selenium
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -15,15 +15,17 @@ driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
 class Booking:
     def __init__(self, name):
+
         self.name = name
-        password = 'qlpttadmin'
-        driver.get('http://suas062-vm/ptt/Login.aspx?change_user=true')
+        self.password = config('PASSWORD')
+        page = config('PAGE')
+        driver.get(page)
         self.wait = WebDriverWait(driver, 10)
 
     def login(self):
         # Get input field for user name and place name
-        driver.find_element(By.XPATH, '//*[@id="txtUserName"]').send_keys("iancr")
-        driver.find_element(By.XPATH, '//*[@id="txtPassword"]').send_keys("qlpttadmin")
+        driver.find_element(By.XPATH, '//*[@id="txtUserName"]').send_keys(self.name)
+        driver.find_element(By.XPATH, '//*[@id="txtPassword"]').send_keys(self.password)
         driver.find_element(By.XPATH, '//*[@id="btnLogin"]').click()
 
     def get_project_hours(self):
@@ -44,15 +46,17 @@ class Booking:
         for index, package in enumerate(work_packages):
             if len(package.text) > 2 and "-2" not in package.text and "In work" not in package.text:
                 if package.text not in "Test" and package.text not in "Assigned" and package.text not in "QL Testing":
+                    print(f'Index is:{index} and value is{package.text}')
                     if len(package.text) > 5:
                         project = package.text
                         all_projects[f'{package.text}'] = []
-                    else:
-                        if len(work_packages[index - 1].text) > 5:
-                            all_projects[f'{work_packages[index-1].text}'] = work_packages[index].text
-                        # else:
-                        #     all_projects[f'{work_packages[index - 2].text}'] = work_packages[index].text
-                        # print(work_packages[index].text)
+                    # elif len(work_packages[index - 5].text) > 10:
+                    #     all_projects[f'{work_packages[index - 5].text}'] = work_packages[index].text
+                    elif len(work_packages[index - 6].text) > 10:
+                        all_projects[f'{work_packages[index - 6].text}'] = [work_packages[index-1].text,work_packages[index].text]
+                    # else:
+                    #     all_projects[f'{work_packages[index - 2].text}'] = work_packages[index].text
+                    # print(work_packages[index].text)
                     # print(work_packages[690].text)
                     # print(package.text)
                     # print(index)
