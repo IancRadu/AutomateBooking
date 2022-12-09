@@ -12,10 +12,18 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys  # used to press enter key
 from pyautogui import press, typewrite, hotkey
+import datetime
 
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
-projects_assigned = {'R02426_Changchun VOLVO RE-DESIGN 1.2': [5.0, 0.0], 'R02395_AUD_MQB_21_DCU_DIS_CCQ': [3.0, 0.0],'R02245 AUD_XXXX_16_PNEU': [6.0, 0.0]}
+projects_assigned = {'R02426_Changchun VOLVO RE-DESIGN 1.2': [datetime.timedelta(hours=float(5.0)),
+                                                              datetime.timedelta(hours=float(0.0))],
+                     'R02395_AUD_MQB_21_DCU_DIS_CCQ': [datetime.timedelta(hours=float(5.0)),
+                                                       datetime.timedelta(hours=float(0.0))],
+                     'R02245 AUD_XXXX_16_PNEU': [datetime.timedelta(hours=float(5.0)),
+                                                 datetime.timedelta(hours=float(0.0))]}
+
+
 # projects_assigned = {'Internal: OEMs spec analysis': [5.0, 0.0]}
 
 
@@ -48,6 +56,11 @@ class Booking:
         except NoSuchElementException:
             driver.find_element(By.ID, 'ext-gen116').click()  # Button expand all
 
+    @staticmethod
+    def to_datetime(str_or_float_to_datetime):
+        result = datetime.timedelta(hours=float(str_or_float_to_datetime))
+        return result
+
     def read_projects_workpackages(self):
         work_packages = driver.find_elements(By.CLASS_NAME, 'x-tree-col')
         all_projects = {}
@@ -57,8 +70,9 @@ class Booking:
                 if package.text not in "Test" and package.text not in "Assigned" and package.text not in "QL Testing":
                     # print(f'Index is:{index} and value is{package.text}')
                     if len(work_packages[index - 6].text) > 10 and work_packages[index - 1].text != '0.00':
-                        all_projects[f'{work_packages[index - 6].text}'] = [float(work_packages[index - 1].text),
-                                                                            float(work_packages[index].text)]
+                        all_projects[f'{work_packages[index - 6].text}'] = [
+                            Booking.to_datetime(work_packages[index - 1].text),
+                            Booking.to_datetime(work_packages[index].text)]
         print(f'{self.name} projects are:\n {all_projects}')
         return all_projects
 
@@ -76,7 +90,8 @@ class Booking:
             time.sleep(1)
             element.click()
             time.sleep(2)
-            typewrite(f'{hours}')
+            new_value = str(hours).replace(':', '.')[:-3]
+            typewrite(f'{new_value}')
             time.sleep(1)
             hotkey('Enter')
 
@@ -101,32 +116,35 @@ class Booking:
                             # person and with enough hours left to book in work packages it will fill the entry form and
                             # subtracts the time from the project assigned hours.
                             name_of_project = work_packages[index + extra].text
-                            hours_worked = float(work_packages[index + 3].text)
+                            hours_worked = Booking.to_datetime(work_packages[index + 3].text)
                             hours_left_to_book = hours_worked
                             for project in projects_assigned:
                                 # print(f"{project} in list")
                                 if name_of_project in projects_assigned:
                                     print(name_of_project)
                                     project_assigned_hours_remaining = projects_assigned[f'{name_of_project}'][0]
-                                    if project_assigned_hours_remaining > 0.0:
+                                    if project_assigned_hours_remaining > Booking.to_datetime(0.0):
                                         print(
                                             f'Found:{name_of_project} with {project_assigned_hours_remaining} hours remaining')
                                         if hours_worked > project_assigned_hours_remaining:
                                             add_hours(work_packages[index + extra + 2],
                                                       project_assigned_hours_remaining)
-                                            projects_assigned[f'{name_of_project}'][1] += project_assigned_hours_remaining
-                                            projects_assigned[f'{name_of_project}'][0] = float(0)
-                                            hours_left_to_book = round((hours_worked - project_assigned_hours_remaining),2)
+                                            projects_assigned[f'{name_of_project}'][
+                                                1] += project_assigned_hours_remaining
+                                            projects_assigned[f'{name_of_project}'][0] = Booking.to_datetime(0)
+                                            hours_left_to_book = hours_worked - project_assigned_hours_remaining
                                         else:
                                             add_hours(work_packages[index + extra + 2],
                                                       hours_left_to_book)
-                                            projects_assigned[f'{name_of_project}'][1] = round((projects_assigned[f'{name_of_project}'][1]+hours_left_to_book),2)
-                                            projects_assigned[f'{name_of_project}'][0] = round((projects_assigned[f'{name_of_project}'][0]-hours_left_to_book),2)
+                                            projects_assigned[f'{name_of_project}'][1] = \
+                                            projects_assigned[f'{name_of_project}'][1] + hours_left_to_book
+                                            projects_assigned[f'{name_of_project}'][0] = \
+                                            projects_assigned[f'{name_of_project}'][0] - hours_left_to_book
                                     break
                             add_one_time = 0
                             extra += 6
         print(projects_assigned)
-                # print(f'Index is:{index} and value is{package.text}')
+        # print(f'Index is:{index} and value is{package.text}')
 
 
 name = Booking('iancr')
