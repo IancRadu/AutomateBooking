@@ -11,7 +11,8 @@ class get_data:
             df = pd.read_excel("./Config.xlsx", "Config", header=0).to_dict()
             config = {}
             for i in df["Name"]:
-                config[df["User_Name"][i]] = df["Name"][i]
+                if type(df["User_Name"][i]) == str: # Filter empty values which are float type
+                    config[df["User_Name"][i]] = df["Name"][i]
             return config
         except PermissionError:
             pass  # returns None if Config Excel file is open
@@ -38,6 +39,7 @@ class get_data:
             print(remaining_data[0][key][0])
             if key == 'Hours not booked':
                 if remaining_data[0][key][1] > 0:
+                    print(remaining_data[key][1])
                     return f'Add new project, {convert_to_hours(remaining_data[key][1])} hours need to be booked.'
             else:
                 if remaining_data[0][key][0] > 0:
@@ -61,6 +63,7 @@ class get_data:
         # Exit writer
         writer.close()
 
-# data = get_data()
-# print(data.read_config_xlsx())
+
+data = get_data()
+print(data.read_config_xlsx())
 # print(data.read_values(data.read_config_xlsx()[1]))

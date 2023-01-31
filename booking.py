@@ -3,7 +3,8 @@ import math
 from decouple import config
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException
+from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException, \
+    UnexpectedAlertPresentException
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.wait import WebDriverWait
@@ -23,12 +24,12 @@ def convert_to_hours(value):
     return f'{math.floor(hours)}.{str(minutes).zfill(2)}'
 
 
-projects_assigned = {'R02426_Changchun VOLVO RE-DESIGN 1.2': [convert_to_minutes('11.3'),
-                                                              convert_to_minutes('0.0')],
-                     'R02428_RVS21xGM13': [convert_to_minutes('1.2'),
-                                           convert_to_minutes('0.0')],
-                     'R02209 MiniMab TVS N289_dPV': [convert_to_minutes('1.01'),
-                                                     convert_to_minutes('0.0')]}
+# projects_assigned = {'R02426_Changchun VOLVO RE-DESIGN 1.2': [convert_to_minutes('11.3'),
+#                                                               convert_to_minutes('0.0')],
+#                      'R02428_RVS21xGM13': [convert_to_minutes('1.2'),
+#                                            convert_to_minutes('0.0')],
+#                      'R02209 MiniMab TVS N289_dPV': [convert_to_minutes('1.01'),
+#                                                      convert_to_minutes('0.0')]}
 
 
 # projects_assigned = {'Internal: OEMs spec analysis': [5.0, 0.0]}
@@ -82,6 +83,7 @@ class Booking:
         typewrite(convert_to_hours(minutes_in))
         time.sleep(1)
         hotkey('Enter')
+        time.sleep(1)
 
     def read_projects_workpackages(self):
         work_packages = self.driver.find_elements(By.CLASS_NAME, 'x-tree-col')
@@ -100,17 +102,17 @@ class Booking:
 
     def go_to_daily_bookings(self):
 
-        self.driver.find_element(By.XPATH, '//*[@id="lbtnBooking"]').click()
-        self.driver.implicitly_wait(3)
-        self.driver.find_element(By.XPATH, '//*[@id="lbtnBooking"]').click()  # Button Bookings
-        self.driver.implicitly_wait(3)
-
-        #  ---------------------delete up to here after test-----------------
+        # self.driver.find_element(By.XPATH, '//*[@id="lbtnBooking"]').click()
+        # self.driver.implicitly_wait(3)
+        # self.driver.find_element(By.XPATH, '//*[@id="lbtnBooking"]').click()  # Button Bookings
+        # self.driver.implicitly_wait(3)
+        #
+        # #  ---------------------delete up to here after test-----------------
         self.driver.find_element(By.XPATH, '//*[@id="ext-comp-1018__tab0"]').click()  # Button DailyBookings
         time.sleep(15)
         self.driver.find_element(By.XPATH, '//*[@id="ext-gen37"]').click()  # Button Expand All
 
-    def add_project_hours(self):
+    def add_project_hours(self, projects_assigned):
         global minutes_left_to_book
         work_packages = self.driver.find_elements(By.CLASS_NAME, 'x-tree-col')
         for index, package in enumerate(work_packages):
@@ -124,6 +126,7 @@ class Booking:
                         add_one_time = 1  # value added to offset first read by 1 index
                         print(
                             f'Start new day: {work_packages[index].text} with {float(work_packages[index + 3].text)} hours')
+                        time.sleep(2)
                         try:
                             while ', ' and ' 20' not in work_packages[index + extra + add_one_time].text:
                                 # print(index + extra + add_one_time)
@@ -134,6 +137,7 @@ class Booking:
                                 name_of_project = work_packages[index + extra].text
                                 minutes_worked = convert_to_minutes(work_packages[index + 3].text)
                                 minutes_left_to_book = minutes_worked
+                                skip = False
                                 for project in projects_assigned:
                                     # print(f"{project} in list")
                                     if name_of_project in projects_assigned:
@@ -160,10 +164,21 @@ class Booking:
                                                     projects_assigned[f'{name_of_project}'][1] + minutes_left_to_book
                                                 projects_assigned[f'{name_of_project}'][0] = \
                                                     projects_assigned[f'{name_of_project}'][0] - minutes_left_to_book
+                                                skip = True
+
+                                        # else:
+                                        #     minutes_left_to_book += minutes_worked
+                                        #     print(minutes_left_to_book)
+                                        #     break
                                         break
+                                if skip:  # If project hours are enough for booking, skip checking the rest of the project
+                                    break
                                 add_one_time = 0
                                 extra += 6
                         except IndexError:
+                            pass
+                        except UnexpectedAlertPresentException:
+                            self.driver.switch_to.alert.accept()
                             pass
         projects_assigned['Hours not booked'] = [0, minutes_left_to_book]
         # print(f'Index is:{index} and value is{package.text}')
