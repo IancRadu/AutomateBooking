@@ -80,10 +80,11 @@ class Booking:
         # new_value = str(hours).replace(':', '.')[:-3]
         # print(f'Data in:{hours} vs data out:{new_value}')
         # typewrite(f'{new_value}')
-        typewrite(convert_to_hours(minutes_in))
+        if convert_to_hours(minutes_in) != '0.00':
+            typewrite(convert_to_hours(minutes_in))
         time.sleep(1)
         hotkey('Enter')
-        time.sleep(1)
+        time.sleep(3)
 
     def read_projects_workpackages(self):
         work_packages = self.driver.find_elements(By.CLASS_NAME, 'x-tree-col')
@@ -164,12 +165,10 @@ class Booking:
                                                     projects_assigned[f'{name_of_project}'][1] + minutes_left_to_book
                                                 projects_assigned[f'{name_of_project}'][0] = \
                                                     projects_assigned[f'{name_of_project}'][0] - minutes_left_to_book
+                                                minutes_left_to_book = 0
                                                 skip = True
-
-                                        # else:
-                                        #     minutes_left_to_book += minutes_worked
-                                        #     print(minutes_left_to_book)
-                                        #     break
+                                        else:
+                                            minutes_left_to_book += minutes_worked
                                         break
                                 if skip:  # If project hours are enough for booking, skip checking the rest of the project
                                     break
@@ -182,4 +181,5 @@ class Booking:
                             pass
         projects_assigned['Hours not booked'] = [0, minutes_left_to_book]
         # print(f'Index is:{index} and value is{package.text}')
+        time.sleep(3)
         return [projects_assigned]
